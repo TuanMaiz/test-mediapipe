@@ -1,63 +1,65 @@
 /* eslint-disable no-unused-vars */
-import { useEffect, useRef } from 'react'
-import './App.css'
-import { FaceDetector, FilesetResolver } from '@mediapipe/tasks-vision'
-import Webcam from 'react-webcam';
-import { Camera } from '@mediapipe/camera_utils';
-
+import { useState, useEffect, useRef } from "react";
+import "./App.css";
+import { FaceDetector, FilesetResolver } from "@mediapipe/tasks-vision";
+import Webcam from "react-webcam";
+import { Camera } from "@mediapipe/camera_utils";
 
 let video;
 let faceDetector;
-let runningMode = "VIDEO"
-let children = [];
+let runningMode = "VIDEO";
+
 let lastVideoTime = -1;
 const options = {
-    baseOptions: {
-      modelAssetPath: "../app/shared/models/blaze_face_short_range.tflite",
-      delegate: "GPU"
-    },
-    runningMode: runningMode,
-  }
+  baseOptions: {
+    modelAssetPath: "../app/shared/models/blaze_face_short_range.tflite",
+    delegate: "GPU",
+  },
+  runningMode: runningMode,
+};
 function Detection() {
-
-  const webcamRef = useRef(null)
+  const [children, setChildren] = useState([]);
+  const webcamRef = useRef(null);
   // Check if webcam access is supported.
   const hasGetUserMedia = () => !!navigator.mediaDevices?.getUserMedia;
-  
+
   // Keep a reference of all the child elements we create
   // so we can remove them easilly on each render.
   async function setUpFaceDetector() {
 
-    if(!hasGetUserMedia()){
-      return
+    if (!hasGetUserMedia()) {
+      return;
     }
 
-    const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm")
-    faceDetector = await FaceDetector.createFromOptions(vision, options)
+    const vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+    );
+    faceDetector = await FaceDetector.createFromOptions(vision, options);
 
-    video = document.getElementById('webcam')
-    navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: false,
-    }).then((stream) => {
-      video.srcObject = stream
-      video.addEventListener("loadeddata", predictWebcam);
-    })
-    .catch((error) => {
-      console.error("Error accessing webcam:", error);
-    });
+    video = document.getElementById("webcam");
+    navigator.mediaDevices
+      .getUserMedia({
+        video: true,
+        audio: false,
+      })
+      .then(function (stream) {
+        video.srcObject = stream;
+        video.addEventListener("loadeddata", predictWebcam);
+      })
+      .catch((error) => {
+        console.error("Error accessing webcam:", error);
+      });
   }
 
   function predictWebcam() {
     let startTimeMs = performance.now();
-      // Detect faces using detectForVideo
+    // Detect faces using detectForVideo
     if (video.currentTime !== lastVideoTime) {
       lastVideoTime = video.currentTime;
-      const detections = faceDetector
-        .detectForVideo(
-          video, 
-          startTimeMs)
-        .detections;
+      const detections = faceDetector.detectForVideo(
+        video,
+        startTimeMs
+      ).detections;
       displayVideoDetections(detections);
     }
 
@@ -67,13 +69,13 @@ function Detection() {
   function displayVideoDetections(detections) {
     // Remove any highlighting from previous frame.
     //console.log(detections)
-    let liveView = document.getElementById('liveView')
+    let liveView = document.getElementById("liveView");
 
     for (let child of children) {
       liveView.removeChild(child);
     }
     children.splice(0);
-  
+
     // Iterate through predictions and draw them to the live view
     for (let detection of detections) {
       const p = document.createElement("p");
@@ -93,7 +95,7 @@ function Detection() {
         "width: " +
         (detection.boundingBox.width - 10) +
         "px;";
-  
+
       const highlighter = document.createElement("div");
       highlighter.setAttribute("class", "highlighter");
       highlighter.style =
@@ -111,10 +113,10 @@ function Detection() {
         "height: " +
         detection.boundingBox.height +
         "px;";
-  
+
       liveView.appendChild(highlighter);
       liveView.appendChild(p);
-  
+
       // Store drawn objects in memory so they are queued to delete at next call
       children.push(highlighter);
       children.push(p);
@@ -130,22 +132,21 @@ function Detection() {
       }
     }
   }
-  useEffect(() =>{
-    setUpFaceDetector()
-    // return () => {
-    //   video = null
-    //   video.removeEventListener("loadeddata", predictWebcam);
-    // }
-  }, [])
-
+  useEffect(() => {
+    setUpFaceDetector();
+    return () => {
+      if (predictWebcam)
+        window.removeEventListener("loadeddata", setUpFaceDetector);
+    };
+  }, []);
 
   return (
-    <div id="liveView" className='videoView'>
-      <Webcam id='webcam' ref={webcamRef} />
+    <div id="liveView" className="videoView">
+      <Webcam id="webcam" ref={webcamRef} />
       {/* <canvas ref={canvasRef} width={640} height={480} /> */}
       {/* <video id='webcam' autoPlay playsInline src=""></video> */}
     </div>
-  )
+  );
 }
 
-export default Detection
+export default Detection;
