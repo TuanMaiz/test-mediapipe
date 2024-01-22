@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-vars */
+// debugger
 import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import { FaceDetector, FilesetResolver } from "@mediapipe/tasks-vision";
@@ -13,13 +14,16 @@ let lastVideoTime = -1;
 const options = {
   baseOptions: {
     modelAssetPath: "../app/shared/models/blaze_face_short_range.tflite",
-    delegate: "GPU",
+    delegate: "CPU",
   },
   runningMode: runningMode,
 };
+let detections;
+const image_size = 150;
 function Detection() {
   const [children, setChildren] = useState([]);
   const webcamRef = useRef(null);
+  const canvasRef = useRef(null);
   // Check if webcam access is supported.
   const hasGetUserMedia = () => !!navigator.mediaDevices?.getUserMedia;
 
@@ -56,13 +60,12 @@ function Detection() {
     // Detect faces using detectForVideo
     if (video.currentTime !== lastVideoTime) {
       lastVideoTime = video.currentTime;
-      const detections = faceDetector.detectForVideo(
+      detections = faceDetector.detectForVideo(
         video,
         startTimeMs
       ).detections;
       displayVideoDetections(detections);
     }
-
     // Call this function again to keep predicting when the browser is ready
     window.requestAnimationFrame(predictWebcam);
   }
@@ -132,6 +135,29 @@ function Detection() {
       }
     }
   }
+  
+  function handleSubmitFace(){
+    console.log(detections)
+    if(detections)
+    {
+      const canvas = canvasRef.current
+      const vid = webcamRef.current
+      canvas.width = detections[0].boundingBox.width
+      canvas.height = detections[0].boundingBox.height
+
+      const dx_left = detections[0].boundingBox.originX
+      const dy_left = detections[0].boundingBox.originY
+
+      console.log(dx_left, dy_left)
+      const context = canvas.getContext("2d")
+      context.drawImage(vid, 
+        dx_left, dy_left, detections[0].boundingBox.width, detections[0].boundingBox.height, //source
+        0, 0, image_size, image_size)//destination
+
+      const base64Canvas = canvas.toDataURL("image/png").split(';base64,')[1];
+      console.log(base64Canvas)
+    }
+  }
   useEffect(() => {
     setUpFaceDetector();
     return () => {
@@ -141,10 +167,13 @@ function Detection() {
   }, []);
 
   return (
-    <div id="liveView" className="videoView">
-      <Webcam id="webcam" ref={webcamRef} />
-      {/* <canvas ref={canvasRef} width={640} height={480} /> */}
-      {/* <video id='webcam' autoPlay playsInline src=""></video> */}
+    <div className="flex flex-row">
+      {/* <Webcam id="webcam" ref={webcamRef} /> */}
+      <div id="liveView" className='videoView'>
+        <video id='webcam' autoPlay playsInline ref={webcamRef} src=""></video>
+        <button onClick={handleSubmitFace}>Submit Face</button>
+      </div>
+      <canvas ref={canvasRef} width={image_size} height={image_size}/>
     </div>
   );
 }

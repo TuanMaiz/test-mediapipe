@@ -6,7 +6,7 @@ function App() {
 
 
   return (
-    <div id="liveView" className='videoView'>
+    <div className='w-full h-full'>
       <Detection />
     </div>
   )

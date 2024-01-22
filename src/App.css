@@ -6,6 +6,10 @@ body {
   --mdc-theme-primary: #007f8b;
   --mdc-theme-on-primary: #f1f3f4;
 }
+#liveView{
+  width: 100%;
+  height: auto;
+}
 .videoView{
   position: relative;
   float: left;
